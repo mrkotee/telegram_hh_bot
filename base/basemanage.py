@@ -4,6 +4,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 
+from config import userbase_path, base_path
 try:
     from models import Users, UserResumes, Vacancies
 except ModuleNotFoundError:
@@ -36,7 +37,7 @@ class BaseManage:
     def __del__(self):
         try:
             self.close_session()
-        except ProgrammingError:
+        except ProgrammingError or AttributeError:
             pass
 
 
@@ -95,10 +96,11 @@ class ResumesManage(BaseManage):
                 self.get_user_resume_by_id(resume_id)
             elif isinstance(resume_id, str):
                 if not self.get_resume_by_hh_id(resume_id):
-                    if keywords:
-                        self.add_resume(resume_id, name, user_id, keywords)
-                    else:
-                        self.add_resume(resume_id, name, user_id)
+                    if name and user_id:
+                        if keywords:
+                            self.add_resume(resume_id, name, user_id, keywords)
+                        else:
+                            self.add_resume(resume_id, name, user_id)
         else:
             self.resume = None
 
@@ -118,6 +120,10 @@ class ResumesManage(BaseManage):
 
     def disable_autoupdate(self):
         self.resume.autoupdate = False
+        self.session.commit()
+
+    def swith_active(self, active=False):
+        self.resume.active = active
         self.session.commit()
 
     def get_keywords(self):

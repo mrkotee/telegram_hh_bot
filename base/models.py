@@ -37,8 +37,10 @@ class UserResumes(UserBase):
     keywords = Column(String)
     autoupdate = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    active = Column(Boolean, default=False)
 
-    def __init__(self, hh_resume_id, name: str, user_id: int, keywords: str = None, autoupdate=False):
+    def __init__(self, hh_resume_id, name: str, user_id: int, keywords: str = None,
+                 autoupdate=False, active=False):
         self.resume_id = hh_resume_id
         self.name = name
         self.user_id = user_id
@@ -46,6 +48,8 @@ class UserResumes(UserBase):
             self.keywords = keywords
         if autoupdate:
             self.autoupdate = autoupdate
+        if active:
+            self.active = active
 
 
 class Vacancies(Base):
