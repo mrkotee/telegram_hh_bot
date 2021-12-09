@@ -90,6 +90,19 @@ def check_token(access_token):
     return None
 
 
+def get_user_resumes(access_token):
+    """
+
+    :param access_token: hh access_token
+    :return: dict {resume_id: resume_title}
+    """
+    url = f'https://api.hh.ru/resumes/mine'
+    headers = {'Authorization': f'Bearer {access_token}'}
+    response = requests.get(url, headers=headers)
+
+    return {resume['id']: resume['title'] for resume in response.json()['items']}
+
+
 def publish_resume(access_token, resume_id):
     url = f'https://api.hh.ru/resumes/{resume_id}/publish'
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -114,6 +127,10 @@ def get_resume_title(access_token, resume_id):
     elif response.status_code == 400:
         print('Bad request')
     return False
+
+
+def get_resume_url(hh_resume_id):
+    return f"https://hh.ru/resume/{hh_resume_id}"
 
 
 def search_vacancies_by_resume(access_token, resume_id, page=0, per_page=40):
