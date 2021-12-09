@@ -1,6 +1,10 @@
 import telebot
 
 from config import telegram_token
+from config import userbase_path, base_path
+from config import redirect_uri, hh_client_id
+from hh_bot import create_auth_url
+from base.basemanage import UserManage
 
 
 bot = telebot.TeleBot(telegram_token, threaded=False)
@@ -11,14 +15,21 @@ def send_welcome(message):
     chat_id = message.chat.id
     username = message.chat.username
 
-    ## add user to base
+    usermanage = UserManage(userbase_path, chat_id, username)
 
-    # if not user in base:
-    msg = f'Здравствуй, {username}\nЧтобы начать пользоваться ботом, нужно авторизироваться через hh.ru.\nСсылка:{{}}'
+    if not usermanage.get_user_access_token():
+        uri = create_auth_url(hh_client_id, chat_id, redirect_uri)
+        markup = telebot.types.InlineKeyboardMarkup()
+        btn = telebot.types.InlineKeyboardButton(text="Авторизироваться", url=uri)
+        markup.add(btn)
+        msg = f'Здравствуй, {username}\nЧтобы начать пользоваться ботом, нужно авторизироваться через hh.ru.'
 
-    # else: msg = "Уведомления уже включены"
+        bot.send_message(chat_id, msg, reply_markup=markup)
 
-    bot.send_message(chat_id, msg)
+    else:
+        msg = "Уведомления уже включены"
+
+        bot.send_message(chat_id, msg)
 
 
 @bot.message_handler(commands=['my_resume'])
@@ -46,3 +57,7 @@ def callback(call):
     bot.answer_callback_query(callback_query_id=call.id, text=call.message.text)  # popup msg
 
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id)  # remove markup
+
+@bot.message_handler(commands=['clear'])
+def clear_markup_msg(message):
+    bot.send_message(message.chat.id, 'clear markup', reply_markup=telebot.types.ReplyKeyboardRemove())

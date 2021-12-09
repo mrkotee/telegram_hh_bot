@@ -3,8 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError
 from config import base_path
-from alcbase import Vacancies
 from hh_bot import search_all_vacancies_by_resume, get_formatted_vacancy
+from base.basemanage import UserManage, ResumesManage, VacancyManage
 from config import hh_user_access_token as hh_token
 from config import resume_ids
 
