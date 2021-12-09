@@ -2,6 +2,7 @@
 from datetime import datetime as dt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 try:
     from models import Users, UserResumes, Vacancies
@@ -19,8 +20,8 @@ def check_session(func):
 
 class BaseManage:
 
-    def __init__(self, base_path):
-        self.session = None
+    def __init__(self, base_path, session=None):
+        self.session = session
         self.base_path = base_path
 
     def create_session(self):
@@ -32,11 +33,17 @@ class BaseManage:
     def close_session(self):
         self.session.close()
 
+    def __del__(self):
+        try:
+            self.close_session()
+        except ProgrammingError:
+            pass
+
 
 class UserManage(BaseManage):
 
-    def __init__(self, base_path, user_id: int = None, name: str = None):
-        super().__init__(base_path)
+    def __init__(self, base_path, user_id: int = None, name: str = None, session=None):
+        super().__init__(base_path, session)
         if user_id:
             if not self.get_user_by_id(user_id):
                 self.get_user_by_chat_id(user_id)
@@ -80,18 +87,18 @@ class UserManage(BaseManage):
 
 class ResumesManage(BaseManage):
 
-    def __init__(self, base_path, resume_id: int = None, keywords: str = None):
-        super().__init__(base_path)
+    def __init__(self, base_path, resume_id: int = None,
+                 name: str = None, user_id: int = None, keywords: str = None, session=None):
+        super().__init__(base_path, session)
         if resume_id:
             if isinstance(resume_id, int):
                 self.get_user_resume_by_id(resume_id)
-                return False
             elif isinstance(resume_id, str):
                 if not self.get_resume_by_hh_id(resume_id):
                     if keywords:
-                        self.add_resume(resume_id, keywords)
+                        self.add_resume(resume_id, name, user_id, keywords)
                     else:
-                        self.add_resume(resume_id)
+                        self.add_resume(resume_id, name, user_id)
         else:
             self.resume = None
 
@@ -125,8 +132,8 @@ class ResumesManage(BaseManage):
         self.session.commit()
 
     @check_session
-    def add_resume(self, hh_resume_id, resume_name, keywords: str = None):
-        self.session.add(UserResumes(hh_resume_id, resume_name))
+    def add_resume(self, hh_resume_id, resume_name, user_id, keywords: str = None):
+        self.session.add(UserResumes(hh_resume_id, resume_name, user_id))
         self.session.commit()
         self.resume = self.get_resume_by_hh_id(hh_resume_id)
         if keywords:
@@ -141,18 +148,55 @@ class ResumesManage(BaseManage):
 
 class VacancyManage(BaseManage):
 
-    def __init__(self, base_path):
-        super().__init__(base_path)
+    def __init__(self, base_path, session=None):
+        self.base_path = base_path
+        self.session = session
+        if not self.session:
+            self.create_session()
 
     def get_not_sended_vacancies_by_resume(self, resume_id):
-        pass
+
+        return self.session.query(Vacancies).filter(
+            Vacancies.resume_id == resume_id).filter(Vacancies.sended == False).all()
 
     def get_all_vacancies_by_resume(self, resume_id):
-        pass
 
-    def get_not_sended_vacancies_by_user(self, user):
-        pass
+        return self.session.query(Vacancies).filter(
+            Vacancies.resume_id == resume_id).all()
 
-    def get_all_vacancies_by_user(self, user):
-        pass
+    def get_not_sended_vacancies_by_user(self, user_id):
+
+        return self.session.query(Vacancies).filter(
+            Vacancies.user_id == user_id).filter(Vacancies.sended == False).all()
+
+    def get_all_vacancies_by_user(self, user_id):
+        return self.session.query(Vacancies).filter(Vacancies.user_id == user_id).all()
+
+    def get_vacancy_by_url(self, vacancy_url):
+        return self.session.query(Vacancies).filter(Vacancies.url == vacancy_url).first()
+
+    def get_vacancy_in_text(self, vacancy):
+        if isinstance(vacancy, Vacancies):
+            return vacancy.text()
+        elif isinstance(vacancy, int):
+            return self.session.query(Vacancies).get(vacancy)
+
+    def set_vacancy_sended(self, vacancy):
+        if isinstance(vacancy, Vacancies):
+            vacancy.sended = True
+        elif isinstance(vacancy, int):
+            self.session.query(Vacancies).get(vacancy).sended = True
+        self.session.commit()
+
+    @check_session
+    def add_vacancy(self, vacancy_url: str, vacancy_name: str, vacancy_description: str,
+                    resume_id: int, user_id: int):
+        self.session.add(Vacancies(vacancy_url, vacancy_name, vacancy_description, resume_id, user_id))
+        try:
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()
+            return False
+        vacancy = self.session.query(Vacancies).filter(Vacancies.url == vacancy_url).first()
+        return vacancy
 

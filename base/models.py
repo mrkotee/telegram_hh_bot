@@ -35,15 +35,17 @@ class UserResumes(UserBase):
     resume_id = Column(String)
     name = Column(String)
     keywords = Column(String)
-    autoupdate = Column(Boolean)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    autoupdate = Column(Boolean, default=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
 
-    def __init__(self, hh_resume_id, name: str, keywords: str = None, autoupdate=False):
+    def __init__(self, hh_resume_id, name: str, user_id: int, keywords: str = None, autoupdate=False):
         self.resume_id = hh_resume_id
         self.name = name
+        self.user_id = user_id
         if keywords:
             self.keywords = keywords
-        self.autoupdate = autoupdate
+        if autoupdate:
+            self.autoupdate = autoupdate
 
 
 class Vacancies(Base):
@@ -55,28 +57,29 @@ class Vacancies(Base):
     add_date = Column(DateTime)
     sended = Column(Boolean)
     resume_id = Column(Integer)
+    user_id = Column(Integer)
 
-    def __init__(self, url, name, description, resume_id: int = None):
+    def __init__(self, url: str, name: str, description: str, resume_id: int, user_id: int):
         """resume id from base"""
         self.url = url
         self.name = name
         self.description = description
         self.add_date = dt.now()
         self.sended = False
-        if resume_id:
-            self.resume_id = resume_id
+        self.resume_id = resume_id
+        self.user_id = user_id
 
     def text(self):
-        return '*{}*\n{}\n{}'.format(self.name, self.description, self.url)
+        return f'*{self.name}*\n{self.description}\n{self.url}'
 
 
-def create_base_files(base_path):
+def create_base_files(base_path, declar_base):
     if not os.path.exists(base_path):
         engine = create_engine('sqlite:///%s' % base_path, echo=False)
-        UserBase.metadata.create_all(bind=engine)
+        declar_base.metadata.create_all(bind=engine)
 
 
 if __name__ == "__main__":
     from config import base_path, userbase_path
-    create_base_files(base_path)
-    create_base_files(userbase_path)
+    create_base_files(base_path, Base)
+    create_base_files(userbase_path, UserBase)
