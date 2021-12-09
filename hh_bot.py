@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime as dt
 
 
 def get_app_token(client_id, client_secret):
@@ -16,20 +17,28 @@ def get_app_token(client_id, client_secret):
     return False
 
 
-def get_user_auth_token(client_id):
-    url = f'https://hh.ru/oauth/authorize?response_type=code&client_id={client_id}'
-    ## need open page and click the button ##
-    ## and maybe login in hh ##
+def create_auth_url(client_id, user_id, redirect_uri):
+    """
+
+    :param client_id: hh app id
+    :param user_id: tg chat id
+    :param redirect_uri: uri to redirect from hh after authorization
+    :return: url for authorization
+    """
+    # url = f'https://hh.ru/oauth/authorize?response_type=code&client_id={client_id}'
+    ## create redirect page on flask! and when url be:
+    url = f'https://hh.ru/oauth/authorize?response_type=code&client_id={client_id}&state={user_id}'\
+        f'&redirect_uri={redirect_uri}'
+    return url
 
 
 def get_user_access_token(client_id, client_secret, user_code):
     """
-    :return: {
-        "access_token": "{access_token}",
-        "token_type": "bearer",
-        "expires_in": 1209600,
-        "refresh_token": "{refresh_token}"
-        }
+    :return: (
+        access_token,
+        refresh_token,
+        access_token_expires_in
+    )
     """
     url = 'https://hh.ru/oauth/token'
     data = f"code={user_code}&client_id={client_id}&client_secret={client_secret}&grant_type=authorization_code"
@@ -37,7 +46,8 @@ def get_user_access_token(client_id, client_secret, user_code):
     response = requests.post(url, data=data, headers=headers)
 
     if response.status_code == 200:
-        return response.json()
+        res_json = response.json()
+        return res_json['access_token'], res_json['refresh_token'], res_json['expires_in']
     elif response.status_code == 400:
         print('Bad request')
     return False
@@ -81,6 +91,19 @@ def check_token(access_token):
     return None
 
 
+def get_user_resumes(access_token):
+    """
+
+    :param access_token: hh access_token
+    :return: dict {resume_id: resume_title}
+    """
+    url = f'https://api.hh.ru/resumes/mine'
+    headers = {'Authorization': f'Bearer {access_token}'}
+    response = requests.get(url, headers=headers)
+
+    return {resume['id']: resume['title'] for resume in response.json()['items']}
+
+
 def publish_resume(access_token, resume_id):
     url = f'https://api.hh.ru/resumes/{resume_id}/publish'
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -105,6 +128,10 @@ def get_resume_title(access_token, resume_id):
     elif response.status_code == 400:
         print('Bad request')
     return False
+
+
+def get_resume_url(hh_resume_id):
+    return f"https://hh.ru/resume/{hh_resume_id}"
 
 
 def search_vacancies_by_resume(access_token, resume_id, page=0, per_page=40):
@@ -159,7 +186,9 @@ def get_formatted_vacancy(vacancy_dict):
     description = '{}\nCompany: *{}*\nRequirements: {}\nResponsibility: {}\nCreated: {}\nStation: {}\n'.format(
         salary, company, requir, resposib, created_at, metrostation)
 
-    return vacancy_url, name, description
+    creation_date = dt.strptime(created_at, "%Y-%m-%dT%H:%M:%S%z").replace(tzinfo=None)
+
+    return vacancy_url, name, description, creation_date
 
 
 def filter_vacancies_by_keyword(vacancies_list, keyword):

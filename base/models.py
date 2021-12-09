@@ -1,3 +1,5 @@
+import datetime
+
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Float, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -37,8 +39,10 @@ class UserResumes(UserBase):
     keywords = Column(String)
     autoupdate = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    active = Column(Boolean, default=False)
 
-    def __init__(self, hh_resume_id, name: str, user_id: int, keywords: str = None, autoupdate=False):
+    def __init__(self, hh_resume_id, name: str, user_id: int, keywords: str = None,
+                 autoupdate=False, active=False):
         self.resume_id = hh_resume_id
         self.name = name
         self.user_id = user_id
@@ -46,6 +50,8 @@ class UserResumes(UserBase):
             self.keywords = keywords
         if autoupdate:
             self.autoupdate = autoupdate
+        if active:
+            self.active = active
 
 
 class Vacancies(Base):
@@ -55,16 +61,19 @@ class Vacancies(Base):
     name = Column(String)
     description = Column(Text)
     add_date = Column(DateTime)
+    creation_date = Column(DateTime)
     sended = Column(Boolean)
     resume_id = Column(Integer)
     user_id = Column(Integer)
 
-    def __init__(self, url: str, name: str, description: str, resume_id: int, user_id: int):
+    def __init__(self, url: str, name: str, description: str, creation_date: datetime.datetime,
+                 resume_id: int, user_id: int):
         """resume id from base"""
         self.url = url
         self.name = name
         self.description = description
         self.add_date = dt.now()
+        self.creation_date = creation_date
         self.sended = False
         self.resume_id = resume_id
         self.user_id = user_id

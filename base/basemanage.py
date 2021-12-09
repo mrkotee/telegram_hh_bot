@@ -1,9 +1,10 @@
-
+import datetime
 from datetime import datetime as dt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 
+from config import userbase_path, base_path
 try:
     from models import Users, UserResumes, Vacancies
 except ModuleNotFoundError:
@@ -36,11 +37,18 @@ class BaseManage:
     def __del__(self):
         try:
             self.close_session()
-        except ProgrammingError:
+        except ProgrammingError or AttributeError:
             pass
 
 
 class UserManage(BaseManage):
+
+    @classmethod
+    def get_all_users(cls, base_path):
+        engine = create_engine(f'sqlite:///{base_path}', echo=False)
+        session = sessionmaker(bind=engine)()
+        users = [UserManage(base_path, user.id, session=session) for user in session.query(Users).all()]
+        return users
 
     def __init__(self, base_path, user_id: int = None, name: str = None, session=None):
         super().__init__(base_path, session)
@@ -81,11 +89,18 @@ class UserManage(BaseManage):
             self.user.hh_acc_token_exp = dt.fromtimestamp(access_token_expire_in)
         self.session.commit()
 
-    def get_all_user_resumes(self):
-        return self.user.user_resumes
+    def get_all_user_resumes_id(self):
+        return [res.id for res in self.user.user_resumes]
 
 
 class ResumesManage(BaseManage):
+
+    @classmethod
+    def get_all_resumes(cls, base_path):
+        engine = create_engine(f'sqlite:///{base_path}', echo=False)
+        session = sessionmaker(bind=engine)()
+        users = [ResumesManage(base_path, resume.id, session=session) for resume in session.query(UserResumes).all()]
+        return users
 
     def __init__(self, base_path, resume_id: int = None,
                  name: str = None, user_id: int = None, keywords: str = None, session=None):
@@ -95,10 +110,11 @@ class ResumesManage(BaseManage):
                 self.get_user_resume_by_id(resume_id)
             elif isinstance(resume_id, str):
                 if not self.get_resume_by_hh_id(resume_id):
-                    if keywords:
-                        self.add_resume(resume_id, name, user_id, keywords)
-                    else:
-                        self.add_resume(resume_id, name, user_id)
+                    if name and user_id:
+                        if keywords:
+                            self.add_resume(resume_id, name, user_id, keywords)
+                        else:
+                            self.add_resume(resume_id, name, user_id)
         else:
             self.resume = None
 
@@ -119,6 +135,17 @@ class ResumesManage(BaseManage):
     def disable_autoupdate(self):
         self.resume.autoupdate = False
         self.session.commit()
+
+    def swith_active(self, active=False):
+        self.resume.active = active
+        self.session.commit()
+
+    @property
+    def active(self):
+        return self.resume.active
+
+    def get_user_id(self):
+        return self.resume.user.id
 
     def get_keywords(self):
         return self.resume.keywords
@@ -162,7 +189,7 @@ class VacancyManage(BaseManage):
     def get_all_vacancies_by_resume(self, resume_id):
 
         return self.session.query(Vacancies).filter(
-            Vacancies.resume_id == resume_id).all()
+            Vacancies.resume_id == resume_id).all()[::-1]
 
     def get_not_sended_vacancies_by_user(self, user_id):
 
@@ -170,7 +197,7 @@ class VacancyManage(BaseManage):
             Vacancies.user_id == user_id).filter(Vacancies.sended == False).all()
 
     def get_all_vacancies_by_user(self, user_id):
-        return self.session.query(Vacancies).filter(Vacancies.user_id == user_id).all()
+        return self.session.query(Vacancies).filter(Vacancies.user_id == user_id).all()[::-1]
 
     def get_vacancy_by_url(self, vacancy_url):
         return self.session.query(Vacancies).filter(Vacancies.url == vacancy_url).first()
@@ -189,9 +216,9 @@ class VacancyManage(BaseManage):
         self.session.commit()
 
     @check_session
-    def add_vacancy(self, vacancy_url: str, vacancy_name: str, vacancy_description: str,
+    def add_vacancy(self, vacancy_url: str, vacancy_name: str, vacancy_description: str, creation_date: datetime.datetime,
                     resume_id: int, user_id: int):
-        self.session.add(Vacancies(vacancy_url, vacancy_name, vacancy_description, resume_id, user_id))
+        self.session.add(Vacancies(vacancy_url, vacancy_name, vacancy_description, creation_date, resume_id, user_id))
         try:
             self.session.commit()
         except IntegrityError:
