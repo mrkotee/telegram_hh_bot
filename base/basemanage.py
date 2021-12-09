@@ -1,4 +1,4 @@
-
+import datetime
 from datetime import datetime as dt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -216,9 +216,9 @@ class VacancyManage(BaseManage):
         self.session.commit()
 
     @check_session
-    def add_vacancy(self, vacancy_url: str, vacancy_name: str, vacancy_description: str,
+    def add_vacancy(self, vacancy_url: str, vacancy_name: str, vacancy_description: str, creation_date: datetime.datetime,
                     resume_id: int, user_id: int):
-        self.session.add(Vacancies(vacancy_url, vacancy_name, vacancy_description, resume_id, user_id))
+        self.session.add(Vacancies(vacancy_url, vacancy_name, vacancy_description, creation_date, resume_id, user_id))
         try:
             self.session.commit()
         except IntegrityError:

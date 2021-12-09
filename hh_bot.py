@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime as dt
 
 
 def get_app_token(client_id, client_secret):
@@ -185,7 +186,9 @@ def get_formatted_vacancy(vacancy_dict):
     description = '{}\nCompany: *{}*\nRequirements: {}\nResponsibility: {}\nCreated: {}\nStation: {}\n'.format(
         salary, company, requir, resposib, created_at, metrostation)
 
-    return vacancy_url, name, description
+    creation_date = dt.strptime(created_at, "%Y-%m-%dT%H:%M:%S%z").replace(tzinfo=None)
+
+    return vacancy_url, name, description, creation_date
 
 
 def filter_vacancies_by_keyword(vacancies_list, keyword):
