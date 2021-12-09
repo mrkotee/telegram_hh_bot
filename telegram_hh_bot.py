@@ -3,7 +3,7 @@ import telebot
 from config import telegram_token
 from config import userbase_path, base_path
 from config import redirect_uri, hh_client_id
-from hh_bot import create_auth_url, get_user_resumes, get_resume_url
+from hh_bot import create_auth_url, get_user_resumes, get_resume_url, publish_resume
 from base.basemanage import UserManage, ResumesManage
 
 
@@ -77,6 +77,9 @@ def resume_settings(call):
     markup.add(telebot.types.InlineKeyboardButton(text=a_update_btn_text,
                                                   callback_data=f"autoupdate {resume_id} {a_update_btn_val}"))
 
+    markup.add(telebot.types.InlineKeyboardButton(text="Опубликовать резюме",
+                                                  callback_data=f"publish {resume_id}"))
+
     btn = telebot.types.InlineKeyboardButton(text="Открыть резюме", url=get_resume_url(resume_id))
     markup.add(btn)
 
@@ -134,4 +137,15 @@ def swith_resume_autoupdate(call):
             break
 
     bot.edit_message_reply_markup(call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith('publish '))
+def swith_resume_autoupdate(call):
+    userm = UserManage(userbase_path, call.message.chat.id)
+    resume_id = call.data.split()[1]
+
+    if publish_resume(userm.get_user_access_token(), resume_id):
+        bot.answer_callback_query(callback_query_id=call.id, text="Резюме опубликовано")
+    else:
+        bot.answer_callback_query(callback_query_id=call.id, text="Ошибка")
 
