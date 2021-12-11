@@ -10,8 +10,8 @@ def get_new_vacancies(access_token, resume, vacancy_base_path):
 
     for vacancy in vacancies_list.copy():
         for vacancy_in_base in vacancies_in_base:
-            if vacancy['alternate_url'] is vacancy_in_base.url:
-                vacancy_in_base.remove(vacancy_in_base)
+            if vacancy['alternate_url'] == vacancy_in_base.url:
+                vacancies_in_base.remove(vacancy_in_base)
                 vacancies_list.remove(vacancy)
                 break
 
