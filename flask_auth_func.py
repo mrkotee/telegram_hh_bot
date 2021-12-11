@@ -14,7 +14,7 @@ def hh_oauth_handler():
     auth_code = flask.request.args.get('code')
     access_token, refresh_token, acc_token_expire = get_user_access_token(hh_client_id, hh_secret, auth_code)
     userm = UserManage(userbase_path, user_chat_id)
-    userm.set_user_tokens(access_token, refresh_token, acc_token_expire)
+    userm.set_user_tokens(access_token, refresh_token, int(acc_token_expire))
     bot.send_message('Авторизация прошла успешно')
 
     return flask.redirect(tg_bot_url)
