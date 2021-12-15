@@ -37,5 +37,5 @@ if __name__ == "__main__":
             if not resume.active:
                 continue
             new_vacancies = get_new_vacancies(user.get_user_access_token(), resume, base_path)
-
-            add_vacancies_to_base(new_vacancies, base_path, resume, user)
+            if new_vacancies:
+                add_vacancies_to_base(new_vacancies, base_path, resume, user)

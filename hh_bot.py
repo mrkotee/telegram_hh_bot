@@ -74,6 +74,18 @@ def refresh_access_token(refresh_token):
     return False
 
 
+def invalidate_access_token(access_token):
+    url = 'https://hh.ru/oauth/token'
+    headers = {'Authorization': f'Bearer {access_token}'}
+    response = requests.delete(url, headers=headers)
+
+    if response.status_code == 204:
+        return True
+    elif response.status_code == 403:
+        print('invalid token')
+    return False
+
+
 def check_token(access_token):
     """check user access token
     :return user's json if token is active

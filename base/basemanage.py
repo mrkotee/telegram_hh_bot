@@ -86,7 +86,13 @@ class UserManage(BaseManage):
         self.user.hh_access_token = access_token
         self.user.hh_refresh_token = refresh_token
         if access_token_expire_in:
-            self.user.hh_acc_token_exp = dt.fromtimestamp(access_token_expire_in)
+            self.user.hh_acc_token_exp = dt.fromtimestamp(dt.now().timestamp() + access_token_expire_in)
+        self.session.commit()
+
+    def delete_user_tokens(self):
+        self.user.hh_access_token = None
+        self.user.hh_refresh_token = None
+        self.user.hh_acc_token_exp = None
         self.session.commit()
 
     def get_all_user_resumes_id(self):
