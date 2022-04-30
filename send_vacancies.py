@@ -25,7 +25,7 @@ def send_vacancies():
             not_sended = not_sended[:50]
 
         for vacancy in not_sended:
-            msg = f'*{vacancy.name}*\n{vacancy.description}'
+            msg = '*{}*\n{}'.format(vacancy.name, vacancy.description)
 
             markup = telebot.types.InlineKeyboardMarkup()
             btn = telebot.types.InlineKeyboardButton(text="Открыть вакансию", url=vacancy.url)
@@ -51,7 +51,7 @@ def send_vacancies():
                     bot.send_message(user_m.user.chat_id, msg, reply_markup=markup)
                 except ApiException:
                     bot.send_message(user_m.user.chat_id,
-                                     f'Something wrong with vacancy id {vacancy.id}', reply_markup=markup)
+                                     'Something wrong with vacancy id {}'.format(vacancy.id), reply_markup=markup)
                     continue
 
             vacancy_manage.set_vacancy_sended(vacancy)

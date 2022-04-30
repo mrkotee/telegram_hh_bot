@@ -4,11 +4,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 
-from config import userbase_path, base_path
+try:
+    from config import userbase_path, base_path
+except ImportError:
+    from ..config import userbase_path, base_path
+
 try:
     from models import Users, UserResumes, Vacancies
-except ModuleNotFoundError:
-    from base.models import Users, UserResumes, Vacancies
+except ImportError:
+    from .models import Users, UserResumes, Vacancies
 
 
 def check_session(func):
@@ -26,7 +30,7 @@ class BaseManage:
         self.base_path = base_path
 
     def create_session(self):
-        engine = create_engine(f'sqlite:///{self.base_path}', echo=False)
+        engine = create_engine('sqlite:///%s' % self.base_path, echo=False)
         self.session = sessionmaker(bind=engine)()
 
         return self.session
@@ -45,7 +49,7 @@ class UserManage(BaseManage):
 
     @classmethod
     def get_all_users(cls, base_path):
-        engine = create_engine(f'sqlite:///{base_path}', echo=False)
+        engine = create_engine('sqlite:///%s' % base_path, echo=False)
         session = sessionmaker(bind=engine)()
         users = [UserManage(base_path, user.id, session=session) for user in session.query(Users).all()]
         return users
@@ -86,7 +90,13 @@ class UserManage(BaseManage):
         self.user.hh_access_token = access_token
         self.user.hh_refresh_token = refresh_token
         if access_token_expire_in:
-            self.user.hh_acc_token_exp = dt.fromtimestamp(access_token_expire_in)
+            self.user.hh_acc_token_exp = dt.fromtimestamp(dt.now().timestamp() + access_token_expire_in)
+        self.session.commit()
+
+    def delete_user_tokens(self):
+        self.user.hh_access_token = None
+        self.user.hh_refresh_token = None
+        self.user.hh_acc_token_exp = None
         self.session.commit()
 
     def get_all_user_resumes_id(self):
@@ -97,7 +107,7 @@ class ResumesManage(BaseManage):
 
     @classmethod
     def get_all_resumes(cls, base_path):
-        engine = create_engine(f'sqlite:///{base_path}', echo=False)
+        engine = create_engine('sqlite:///%s' % base_path, echo=False)
         session = sessionmaker(bind=engine)()
         users = [ResumesManage(base_path, resume.id, session=session) for resume in session.query(UserResumes).all()]
         return users

@@ -79,7 +79,7 @@ class Vacancies(Base):
         self.user_id = user_id
 
     def text(self):
-        return f'*{self.name}*\n{self.description}\n{self.url}'
+        return '*{}*\n{}\n{}'.format(self.name, self.description, self.url)
 
 
 def create_base_files(base_path, declar_base):
@@ -89,6 +89,9 @@ def create_base_files(base_path, declar_base):
 
 
 if __name__ == "__main__":
-    from config import base_path, userbase_path
+    try:
+        from config import base_path, userbase_path
+    except ImportError:
+        from .config import base_path, userbase_path
     create_base_files(base_path, Base)
     create_base_files(userbase_path, UserBase)
